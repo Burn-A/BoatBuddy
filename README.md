@@ -2,7 +2,7 @@
 
 A mobile-first trip planner for recreational boaters. BoatBuddy gives you on-the-water GPS navigation, near-real-time water depth and wave data, marina and harbor information, and an adaptive ETA based on your specific boat's performance — all in a fast, Google-Maps-style interface.
 
-> **Status:** Planning phase. This repository currently contains the software requirements ([`SRS.md`](./SRS.md)) and the software architecture ([`ARCHITECTURE.md`](./ARCHITECTURE.md)). Implementation has not started.
+> **Status:** M3 — Boat profile. Requirements ([`SRS.md`](./SRS.md)) and architecture ([`ARCHITECTURE.md`](./ARCHITECTURE.md)) are in place. The Next.js app boots a Mapbox map with live GPS vessel position, side menu, unit preferences, layer toggle, and a course-up compass. A boat library with 54 seed models (Boston Whaler, Grady-White, Yamaha, Sea Ray, Beneteau, Catalina, and more) persists to IndexedDB and feeds an inline editor and fuel-range estimator. Tide / wave / marina data layers land in M4.
 
 ---
 
@@ -75,6 +75,10 @@ pnpm dev
 5. **M5 — ETA + routing**: Great-circle routing, adaptive ETA from boat specs.
 6. **M6 — Marinas**: Harbor/marina layer with detail cards.
 7. **M7 — Offline + polish**: Tile caching, PWA install, accessibility audit.
+
+### Stretch Goals (Post-v1)
+
+- **Inclement weather awareness**: Integrate marine weather forecasts (NOAA NWS marine zone forecasts, wind/gust overlays, small-craft advisory alerts) directly into trip planning and routing. When plotting a route, the system would surface active weather warnings for the planned area and time window, suggest departure-time adjustments based on forecast conditions, and flag segments of the route that pass through advisory zones. See SRS §3.7 for detailed requirements.
 
 ## License
 

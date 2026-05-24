@@ -26,6 +26,7 @@ Out of scope (this version):
 - Multi-user fleet management.
 - Social/sharing features.
 - Native iOS/Android binaries (PWA only).
+- Inclement weather forecasting and route-level weather advisory integration *(stretch goal — see §3.7)*.
 
 ### 1.3 Definitions, Acronyms
 | Term | Meaning |
@@ -179,6 +180,38 @@ A top search bar shall be persistently visible on the map view, matching Google 
 **FR-053 — Layer toggle button** *(Must)*
 A floating action button shall toggle visibility of optional layers (tides, waves, AToN, hazards, marinas, depth).
 
+### 3.7 Inclement Weather Awareness *(Stretch Goal — Post-v1)*
+
+This section captures future requirements for integrating marine weather forecasting into trip planning and routing. All requirements in this section are priority **Could** and are explicitly out of scope for v1. They are documented here to inform architecture decisions and avoid painting the system into a corner.
+
+**FR-060 — Marine zone forecast overlay** *(Could)*
+The system shall display NOAA NWS marine zone forecasts as an optional map overlay. Zones with an active small-craft advisory, gale warning, or storm warning shall be rendered with a distinct color and icon. Data source: NWS Marine Zone Forecast API (`https://api.weather.gov/zones/offshore`).
+
+**FR-061 — Route weather intersection check** *(Could)*
+When the user sets a destination and a route is drawn, the system shall automatically check whether the route passes through any active NWS marine warning zone. If so, a non-blocking banner shall warn the user of the advisory type and affected segment.
+
+**FR-062 — Forecast wind and gust overlay** *(Could)*
+The system shall display a wind barb or arrow overlay sourced from NOAA GFS/NAM marine grids, showing forecast wind speed and direction for the next 6–24 hours at a user-selectable forecast hour. Gusts shall be indicated where available.
+
+**FR-063 — Departure window suggestion** *(Could)*
+Given a planned route and destination, the system shall analyze the forecast for the route corridor over the next 24 hours and surface up to three departure-time windows where forecast wind/wave conditions are below a user-configured comfort threshold (e.g., "winds < 15 kn, seas < 3 ft"). The suggestion UI shall make clear this is informational and not a safety guarantee.
+
+**FR-064 — Weather alert push notification** *(Could)*
+If the user has an active trip and a new NWS marine warning is issued for a zone intersecting their planned route, the system shall send a browser push notification (requires user opt-in). Notification shall include advisory type, zone name, and a deep link back to the map.
+
+**FR-065 — Integrated weather detail card** *(Could)*
+Tapping any point on the map while the forecast overlay is active shall open a detail card showing: current NDBC observations from the nearest buoy (carried over from FR-012), NWS hourly forecast for that grid point (wind, gusts, wave height where available), and active advisories for the containing marine zone.
+
+**Data sources for §3.7:**
+- NWS Marine API: `https://api.weather.gov` (zone forecasts, active alerts — no auth required).
+- NOAA NDBC: already in scope (FR-012); reused for current conditions context.
+- NOAA GFS/NAM grids: available via NWS gridded forecast endpoints; evaluate bandwidth cost before implementing FR-062.
+
+**Open questions for §3.7:**
+- Forecast grid data can be large; determine whether to pull only along the route polyline or cache a bounding box, and establish a cache TTL (suggest 1 h).
+- Departure-window algorithm (FR-063) needs a defined "comfort threshold" UX — consider letting each boat profile store a preferred wind/wave limit.
+- Push notifications (FR-064) require a service worker upgrade and VAPID key management; assess against v1 service worker work in FR-042.
+
 ---
 
 ## 4. Non-Functional Requirements
@@ -268,6 +301,10 @@ A floating action button shall toggle visibility of optional layers (tides, wave
 **US-5 — Custom boat**
 > *As an owner of an unusual boat not in the seed list, I want to enter my own specs once and have ETAs use them.*
 > Maps to: FR-021, FR-023, FR-024.
+
+**US-6 — Weather-aware trip planning** *(Stretch Goal)*
+> *As a boater planning an offshore run for tomorrow morning, I want BoatBuddy to tell me if there are any active marine warnings along my route and suggest a departure time when winds and seas are within my comfort zone, so I can plan confidently and avoid getting caught out.*
+> Maps to: FR-060, FR-061, FR-062, FR-063.
 
 ---
 
