@@ -11,6 +11,13 @@
 import { create } from 'zustand';
 import { DEFAULT_UNITS, type UnitPrefs } from './units';
 import type { BoatProfile } from '@/features/boat/types';
+import type { Bbox } from './bbox';
+
+export interface SelectedFeature {
+  kind: 'tide' | 'wave';
+  id: string;
+  name: string;
+}
 
 export interface VesselFix {
   lat: number;
@@ -60,6 +67,15 @@ export interface UiState {
   hydrated: boolean;
   boats: BoatProfile[];
   activeBoatId: string | null;
+
+  // Map viewport — populated from the renderer's bbox-change events so
+  // data layers can scope their queries (FR-010, FR-012).
+  bbox: Bbox | null;
+  setBbox: (b: Bbox | null) => void;
+
+  // Currently-tapped tide station or wave buoy.
+  selectedFeature: SelectedFeature | null;
+  setSelectedFeature: (f: SelectedFeature | null) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -90,4 +106,10 @@ export const useUiStore = create<UiState>((set) => ({
   hydrated: false,
   boats: [],
   activeBoatId: null,
+
+  bbox: null,
+  setBbox: (b) => set({ bbox: b }),
+
+  selectedFeature: null,
+  setSelectedFeature: (f) => set({ selectedFeature: f }),
 }));

@@ -180,6 +180,20 @@ A top search bar shall be persistently visible on the map view, matching Google 
 **FR-053 — Layer toggle button** *(Must)*
 A floating action button shall toggle visibility of optional layers (tides, waves, AToN, hazards, marinas, depth).
 
+**FR-054 — Route Quick Info panel** *(Should)*
+Once a destination is set and a route is drawn, a "Quick Info" button shall appear on the map UI (suggested placement: bottom sheet or route line toolbar). Tapping it opens a modal or slide-up panel summarizing the full trip at a glance. The panel shall display the following, in order:
+
+1. **ETA** — estimated travel time and projected arrival clock time, derived from the active boat's cruise speed and remaining distance (see FR-020). Updates if the user adjusts the departure time input.
+2. **Distance** — total route distance in the user's preferred unit (nm / mi / km, per FR-051).
+3. **Fuel needed** — estimated fuel consumption for the trip in gallons (or liters if metric), calculated as `(distance ÷ cruise speed) × fuel burn rate (gph)` from the active boat profile (FR-023). Displayed as "X gal needed."
+4. **Minimum starting fuel** — the minimum fuel level the user should have aboard before departing, expressed as a percentage and absolute gallons. Calculated as fuel needed + a user-configurable reserve margin (default: 1/4 tank or 10% of capacity, whichever is greater). If no boat profile is active or fuel capacity has not been entered, this field shall display a prompt to complete the boat profile rather than a value.
+5. **Max wave height along route** — the highest significant wave height reported by any NDBC buoy within 20 nm of the route polyline, labeled with the reporting buoy name and observation age. Sourced from the same data as FR-012/FR-013. If no buoy is within range, display "No nearby buoy data."
+6. **Weather warnings** *(requires §3.7)* — a summary row listing any active NWS marine advisories (small-craft, gale, storm) whose zones intersect the route. Each warning shows advisory type, affected zone name, and expiry time. If §3.7 is not yet implemented, this row is omitted entirely from the panel; the panel shall not display a placeholder or empty state for it.
+
+The panel shall include a clearly visible disclaimer: *"For planning purposes only — not for primary navigation."* Closing the panel returns the user to the map with no state change to the active route.
+
+**Dependencies:** FR-054 aggregates data from FR-007 (route), FR-020 (ETA), FR-023 (boat specs), FR-025 (fuel), FR-012/FR-013 (waves), and optionally FR-061 (weather intersection, §3.7). All dependencies except FR-061 are in-scope for v1; the weather row is additive and safe to omit until §3.7 is built.
+
 ### 3.7 Inclement Weather Awareness *(Stretch Goal — Post-v1)*
 
 This section captures future requirements for integrating marine weather forecasting into trip planning and routing. All requirements in this section are priority **Could** and are explicitly out of scope for v1. They are documented here to inform architecture decisions and avoid painting the system into a corner.
@@ -302,7 +316,11 @@ Tapping any point on the map while the forecast overlay is active shall open a d
 > *As an owner of an unusual boat not in the seed list, I want to enter my own specs once and have ETAs use them.*
 > Maps to: FR-021, FR-023, FR-024.
 
-**US-6 — Weather-aware trip planning** *(Stretch Goal)*
+**US-6 — Quick trip sanity check**
+> *As a boater who just plotted a route to a destination, I want to tap a single button and immediately see my ETA, how much fuel I'll burn, the minimum I should have in the tank before leaving, and whether there are any rough seas or weather warnings along the way — so I can decide in seconds whether the trip is feasible today.*
+> Maps to: FR-054, FR-020, FR-023, FR-025, FR-012, FR-061 (weather row, optional).
+
+**US-7 — Weather-aware trip planning** *(Stretch Goal)*
 > *As a boater planning an offshore run for tomorrow morning, I want BoatBuddy to tell me if there are any active marine warnings along my route and suggest a departure time when winds and seas are within my comfort zone, so I can plan confidently and avoid getting caught out.*
 > Maps to: FR-060, FR-061, FR-062, FR-063.
 

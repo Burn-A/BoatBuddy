@@ -2,7 +2,7 @@
 
 A mobile-first trip planner for recreational boaters. BoatBuddy gives you on-the-water GPS navigation, near-real-time water depth and wave data, marina and harbor information, and an adaptive ETA based on your specific boat's performance — all in a fast, Google-Maps-style interface.
 
-> **Status:** M3 — Boat profile. Requirements ([`SRS.md`](./SRS.md)) and architecture ([`ARCHITECTURE.md`](./ARCHITECTURE.md)) are in place. The Next.js app boots a Mapbox map with live GPS vessel position, side menu, unit preferences, layer toggle, and a course-up compass. A boat library with 54 seed models (Boston Whaler, Grady-White, Yamaha, Sea Ray, Beneteau, Catalina, and more) persists to IndexedDB and feeds an inline editor and fuel-range estimator. Tide / wave / marina data layers land in M4.
+> **Status:** M4 — Live data. Requirements ([`SRS.md`](./SRS.md)) and architecture ([`ARCHITECTURE.md`](./ARCHITECTURE.md)) are in place. The Next.js app boots a Mapbox map with live GPS vessel position, side menu, unit preferences, course-up compass, and a 54-boat library backed by IndexedDB. A Next.js BFF proxies NOAA CO-OPS (tides) and NDBC (wave buoys) behind a TTL-cached server layer; the client uses TanStack Query to render tappable station overlays with bottom-sheet detail cards showing latest water level, next high/low, sig-wave height, wind, and a freshness badge. Marinas and routing land in M5–M6.
 
 ---
 
@@ -21,6 +21,7 @@ Most consumer mapping apps treat the water as an empty blue void. Dedicated mari
 | **Adaptive ETA** | ETA recalculates continuously from live GPS speed, distance remaining, and fuel-burn-aware cruise speed. |
 | **Marinas & harbors** | Slip availability, fuel (gas/diesel), pumpout, food, contact info. |
 | **Navigation aids** | Buoys, daymarks, hazards, restricted areas, no-wake zones from NOAA ENC data. |
+| **Route Quick Info** | One-tap summary panel for a plotted route: ETA, distance, fuel needed, minimum starting fuel (from boat specs), max wave height along the route, and any active weather warnings. |
 
 Full functional and non-functional requirements live in [`SRS.md`](./SRS.md).
 
@@ -74,7 +75,8 @@ pnpm dev
 4. **M4 — Live data**: NOAA tide/wave overlays, BFF caching layer.
 5. **M5 — ETA + routing**: Great-circle routing, adaptive ETA from boat specs.
 6. **M6 — Marinas**: Harbor/marina layer with detail cards.
-7. **M7 — Offline + polish**: Tile caching, PWA install, accessibility audit.
+7. **M7 — Route Quick Info**: One-tap trip summary panel (ETA, fuel, wave height, weather warnings) surfaced after a destination is set.
+8. **M8 — Offline + polish**: Tile caching, PWA install, accessibility audit.
 
 ### Stretch Goals (Post-v1)
 
