@@ -8,17 +8,29 @@
  */
 
 import Link from 'next/link';
-import { X, Anchor, Ruler, Info } from 'lucide-react';
+import { useEffect } from 'react';
+import { X, Anchor, Ruler, Info, CloudDownload } from 'lucide-react';
 import { useUiStore } from '@/lib/store';
 import { cn } from '@/lib/cn';
 import type { DistanceUnit, SpeedUnit, DepthUnit } from '@/lib/units';
 import { BoatBadge } from './BoatBadge';
+import { SaveOfflineButton } from './SaveOfflineButton';
 
 export function SideMenu() {
   const open = useUiStore((s) => s.sideMenuOpen);
   const setOpen = useUiStore((s) => s.setSideMenuOpen);
   const units = useUiStore((s) => s.units);
   const setUnits = useUiStore((s) => s.setUnits);
+
+  // Escape closes the drawer (NFR-013 keyboard nav).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, setOpen]);
 
   return (
     <>
@@ -99,9 +111,18 @@ export function SideMenu() {
             />
           </Section>
 
+          <Section icon={<CloudDownload className="h-4 w-4" />} title="Offline">
+            <SaveOfflineButton />
+            <p className="text-xs text-neutral-500">
+              Caches map tiles for the current view so they load without a network. The
+              app shell is always cached after first visit.
+            </p>
+          </Section>
+
           <Section icon={<Info className="h-4 w-4" />} title="About">
             <p className="text-neutral-500">
-              BoatBuddy is a planning aid only. Not for primary navigation.
+              BoatBuddy is a planning aid only. Not for primary navigation. Always carry
+              charted paper maps, a compass, and certified marine electronics.
             </p>
           </Section>
         </nav>

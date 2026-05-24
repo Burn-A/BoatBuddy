@@ -79,6 +79,16 @@ export interface MapRenderer {
   /** Subscribe to long-press / right-click gestures. */
   onLongPress(handler: LongPressHandler): () => void;
 
+  /**
+   * Warm the SW tile cache for a bounding box by panning through it at
+   * the current zoom and one level deeper. Resolves when finished;
+   * `onProgress` fires after each grid step with a value in [0, 1].
+   */
+  warmTilesForBbox(
+    bbox: Bbox,
+    opts?: { onProgress?: (fraction: number) => void; signal?: AbortSignal },
+  ): Promise<void>;
+
   destroy(): void;
 }
 
@@ -463,6 +473,41 @@ export function createRenderer(opts: RendererInitOptions): MapRenderer {
       return () => {
         longPressHandlers.delete(handler);
       };
+    },
+
+    async warmTilesForBbox(bbox, opts) {
+      const startCenter = map.getCenter();
+      const startZoom = map.getZoom();
+      const baseZoom = Math.max(8, Math.min(15, Math.floor(startZoom)));
+      const zooms = [baseZoom, Math.min(15, baseZoom + 1)];
+      const STEPS = 4; // 4x4 grid per zoom level
+      const totalSteps = zooms.length * STEPS * STEPS;
+      let done = 0;
+
+      const waitIdle = () =>
+        Promise.race([
+          new Promise<void>((resolve) => map.once('idle', () => resolve())),
+          new Promise<void>((resolve) => setTimeout(resolve, 4000)),
+        ]);
+
+      try {
+        for (const zoom of zooms) {
+          for (let i = 0; i < STEPS; i++) {
+            for (let j = 0; j < STEPS; j++) {
+              if (opts?.signal?.aborted) throw new Error('aborted');
+              const lng = bbox.west + ((bbox.east - bbox.west) * (i + 0.5)) / STEPS;
+              const lat = bbox.south + ((bbox.north - bbox.south) * (j + 0.5)) / STEPS;
+              map.jumpTo({ center: [lng, lat], zoom });
+              await waitIdle();
+              done++;
+              opts?.onProgress?.(done / totalSteps);
+            }
+          }
+        }
+      } finally {
+        // Restore the original view regardless of how we exit.
+        map.jumpTo({ center: startCenter, zoom: startZoom });
+      }
     },
 
     destroy() {

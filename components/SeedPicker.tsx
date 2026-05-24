@@ -8,7 +8,7 @@
  * module and closes.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { searchSeeds, SEED_DISCLAIMER } from '@/features/boat/seedDb';
 import { createFromSeed } from '@/features/boat/profile';
@@ -52,6 +52,16 @@ export function SeedPicker({ open, onClose, onPicked }: SeedPickerProps) {
     () => searchSeeds(query, filter === 'all' ? undefined : filter),
     [query, filter],
   );
+
+  // Escape closes the picker.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
   async function pick(seed: BoatSeed) {
     setBusyId(seed.id);

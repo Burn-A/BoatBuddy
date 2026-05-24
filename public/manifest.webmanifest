@@ -1,0 +1,19 @@
+{
+  "name": "BoatBuddy",
+  "short_name": "BoatBuddy",
+  "description": "Mobile-first marine trip planner with GPS, tides, waves, marinas, and adaptive ETA.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1d2a",
+  "theme_color": "#0b1d2a",
+  "orientation": "any",
+  "categories": ["navigation", "travel", "utilities"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

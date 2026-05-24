@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Maskable safe area: keep important content inside a 410x410 center square (per W3C). -->
+  <rect width="512" height="512" rx="96" fill="#0b1d2a"/>
+
+  <!-- Stylized compass + boat hull -->
+  <g transform="translate(256 256)">
+    <!-- Outer compass ring -->
+    <circle r="170" fill="none" stroke="#9ec9e8" stroke-width="6" opacity="0.45"/>
+    <!-- North marker -->
+    <polygon points="0,-180 -14,-150 14,-150" fill="#9ec9e8"/>
+    <!-- Inner ring -->
+    <circle r="130" fill="#102a3c"/>
+
+    <!-- Boat hull -->
+    <path d="M -100 30 Q -90 70 0 80 Q 90 70 100 30 Z" fill="#0a84ff"/>
+    <!-- Cabin -->
+    <rect x="-30" y="-10" width="60" height="40" rx="6" fill="#9ec9e8"/>
+    <!-- Mast -->
+    <line x1="0" y1="-10" x2="0" y2="-70" stroke="#9ec9e8" stroke-width="4"/>
+    <!-- Sail -->
+    <polygon points="0,-70 0,-10 40,-10" fill="#ffffff"/>
+  </g>
+</svg>

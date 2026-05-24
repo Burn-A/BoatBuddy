@@ -8,12 +8,15 @@
  *   M3: hydrate boat library on mount.
  *   M4: track viewport bbox, mount tide + wave data layers, handle
  *       feature taps via a bottom sheet.
- *   M5: long-press to drop a waypoint, route line + adaptive ETA,
+*   M5: long-press to drop a waypoint, route line + adaptive ETA,
  *       fuel-range ring.
+ *   M6: marina layer with detail cards.
+ *   M7: RendererProvider so the side menu can warm tiles; offline badge.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { createRenderer, type MapRenderer } from '@/features/map/renderer';
+import { RendererProvider } from '@/features/map/RendererContext';
 import { startVesselWatcher, type VesselWatcher } from '@/features/navigation/vessel';
 import { hydrateBoatLibrary } from '@/features/boat/profile';
 import { useTideLayer } from '@/features/map/layers/tides';
@@ -31,6 +34,7 @@ import { BottomSheet } from '@/components/BottomSheet';
 import { FeatureDetail } from '@/components/FeatureDetail';
 import { RouteHeader } from '@/components/RouteHeader';
 import { WaypointPrompt } from '@/components/WaypointPrompt';
+import { OfflineBadge } from '@/components/OfflineBadge';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '';
 const MAPBOX_STYLE =
@@ -136,13 +140,16 @@ export function MapView() {
   useRangeRingLayer({ renderer });
 
   return (
-    <>
+    <RendererProvider renderer={renderer}>
       <div ref={containerRef} className="absolute inset-0" aria-label="Marine map" />
 
       <div className="pointer-events-none absolute inset-x-0 top-[env(safe-area-inset-top)] z-20 flex flex-col gap-2 p-3">
         <div className="flex items-start gap-2">
           <SearchBar className="flex-1" />
           <StatusPill />
+        </div>
+        <div className="flex justify-center">
+          <OfflineBadge />
         </div>
         {destination && (
           <div className="flex justify-center">
@@ -174,6 +181,6 @@ export function MapView() {
       >
         {selectedFeature && <FeatureDetail feature={selectedFeature} />}
       </BottomSheet>
-    </>
+    </RendererProvider>
   );
 }
