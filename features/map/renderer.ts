@@ -32,38 +32,64 @@ export interface PointFeature {
 }
 
 export interface PointLayerStyle {
-  /** CSS color or expression-friendly string. */
   fill: string;
   stroke?: string;
   radius?: number;
 }
 
-export type FeatureClickHandler = (layerId: string, feature: PointFeature) => void;
+export interface LineLayerStyle {
+  color: string;
+  width?: number;
+  /** Optional dasharray, e.g., [2, 2]. */
+  dashArray?: number[];
+  opacity?: number;
+}
 
+export interface PolygonLayerStyle {
+  fill: string;
+  outline?: string;
+  fillOpacity?: number;
+}
+
+export type FeatureClickHandler = (layerId: string, feature: PointFeature) => void;
 export type BboxHandler = (bbox: Bbox) => void;
+export type LongPressHandler = (coords: LatLng) => void;
 
 export interface MapRenderer {
   setVesselPosition(fix: { lat: number; lng: number; headingDeg: number | null }): void;
   setCourseUp(enabled: boolean, headingDeg: number | null): void;
   flyTo(target: LatLng, zoom?: number): void;
-  /** Get the current map viewport as a bbox. */
   getBbox(): Bbox;
-  /** Subscribe to viewport changes (debounced on move-end). */
   onBboxChange(handler: BboxHandler): () => void;
-  /** Add or replace a layer of point features. */
+
   upsertPointLayer(layerId: string, style: PointLayerStyle, features: PointFeature[]): void;
-  /** Show/hide an existing layer without dropping its data. */
+  upsertLineLayer(layerId: string, style: LineLayerStyle, polyline: [number, number][]): void;
+  upsertPolygonLayer(
+    layerId: string,
+    style: PolygonLayerStyle,
+    polygon: [number, number][][],
+  ): void;
   setLayerVisible(layerId: string, visible: boolean): void;
-  /** Remove a layer and its source. */
   removeLayer(layerId: string): void;
-  /** Subscribe to clicks on managed point layers. */
+
+  /** Toggle a single waypoint marker. Pass null to remove. */
+  setWaypointMarker(coords: LatLng | null): void;
+
   onFeatureClick(handler: FeatureClickHandler): () => void;
+  /** Subscribe to long-press / right-click gestures. */
+  onLongPress(handler: LongPressHandler): () => void;
+
   destroy(): void;
 }
 
 const VESSEL_SOURCE = 'bb-vessel';
 const VESSEL_LAYER = 'bb-vessel-layer';
 const MANAGED_PREFIX = 'bb-layer-';
+const WAYPOINT_SOURCE = 'bb-waypoint';
+const WAYPOINT_LAYER = 'bb-waypoint-layer';
+
+const LONG_PRESS_MS = 550;
+const LONG_PRESS_MOVE_TOLERANCE_PX = 8;
 
 export function createRenderer(opts: RendererInitOptions): MapRenderer {
   mapboxgl.accessToken = opts.accessToken;
@@ -79,9 +105,16 @@ export function createRenderer(opts: RendererInitOptions): MapRenderer {
   });
 
   let vesselAdded = false;
+  let waypointAdded = false;
   const managedLayers = new Set<string>();
   const featureClickHandlers = new Set<FeatureClickHandler>();
   const bboxHandlers = new Set<BboxHandler>();
+  const longPressHandlers = new Set<LongPressHandler>();
+
+  function whenStyleReady(cb: () => void) {
+    if (map.isStyleLoaded()) cb();
+    else map.once('style.load', cb);
+  }
 
   function ensureVesselLayer() {
     if (vesselAdded || !map.isStyleLoaded()) return;
@@ -105,6 +138,28 @@ export function createRenderer(opts: RendererInitOptions): MapRenderer {
     }
   }
 
+  function ensureWaypointLayer() {
+    if (waypointAdded || !map.isStyleLoaded()) return;
+    if (!map.getSource(WAYPOINT_SOURCE)) {
+      map.addSource(WAYPOINT_SOURCE, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: WAYPOINT_LAYER,
+        type: 'circle',
+        source: WAYPOINT_SOURCE,
+        paint: {
+          'circle-radius': 9,
+          'circle-color': '#ff9500',
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': 3,
+        },
+      });
+      waypointAdded = true;
+    }
+  }
+
   function emitBbox() {
     const b = map.getBounds();
     if (!b) return;
@@ -117,11 +172,14 @@ export function createRenderer(opts: RendererInitOptions): MapRenderer {
     bboxHandlers.forEach((h) => h(bbox));
   }
 
-  map.on('style.load', ensureVesselLayer);
+  map.on('style.load', () => {
+    ensureVesselLayer();
+    ensureWaypointLayer();
+  });
   map.on('moveend', emitBbox);
   map.on('load', emitBbox);
 
-  // Click delegation: any click that hits a managed layer routes to handlers.
+  // Feature-click delegation across all managed point/line/polygon layers.
   map.on('click', (e) => {
     if (managedLayers.size === 0) return;
     const features = map.queryRenderedFeatures(e.point, {
@@ -141,10 +199,51 @@ export function createRenderer(opts: RendererInitOptions): MapRenderer {
     featureClickHandlers.forEach((h) => h(f.layer.id.replace(MANAGED_PREFIX, ''), point));
   });
 
-  function whenStyleReady(cb: () => void) {
-    if (map.isStyleLoaded()) cb();
-    else map.once('style.load', cb);
+  // Long-press / contextmenu wiring. Mapbox exposes 'contextmenu' for
+  // right-click on desktop but the touch behavior is inconsistent across
+  // browsers, so we attach our own touch-and-hold detector to the canvas.
+  map.on('contextmenu', (e) => {
+    const { lng, lat } = e.lngLat;
+    longPressHandlers.forEach((h) => h({ lat, lng }));
+  });
+
+  const canvas = map.getCanvasContainer();
+  let pressTimer: ReturnType<typeof setTimeout> | null = null;
+  let pressStart: { x: number; y: number } | null = null;
+
+  function cancelPress() {
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+    }
+    pressStart = null;
   }
+
+  const onTouchStart = (ev: TouchEvent) => {
+    if (ev.touches.length !== 1) return;
+    const t = ev.touches[0];
+    pressStart = { x: t.clientX, y: t.clientY };
+    pressTimer = setTimeout(() => {
+      if (!pressStart) return;
+      const rect = canvas.getBoundingClientRect();
+      const px: [number, number] = [pressStart.x - rect.left, pressStart.y - rect.top];
+      const lngLat = map.unproject(px);
+      longPressHandlers.forEach((h) => h({ lat: lngLat.lat, lng: lngLat.lng }));
+      cancelPress();
+    }, LONG_PRESS_MS);
+  };
+  const onTouchMove = (ev: TouchEvent) => {
+    if (!pressStart || ev.touches.length !== 1) return;
+    const t = ev.touches[0];
+    const dx = t.clientX - pressStart.x;
+    const dy = t.clientY - pressStart.y;
+    if (Math.hypot(dx, dy) > LONG_PRESS_MOVE_TOLERANCE_PX) cancelPress();
+  };
+  const onTouchEnd = () => cancelPress();
+  canvas.addEventListener('touchstart', onTouchStart, { passive: true });
+  canvas.addEventListener('touchmove', onTouchMove, { passive: true });
+  canvas.addEventListener('touchend', onTouchEnd);
+  canvas.addEventListener('touchcancel', onTouchEnd);
 
   return {
     setVesselPosition({ lat, lng, headingDeg }) {
@@ -229,21 +328,126 @@ export function createRenderer(opts: RendererInitOptions): MapRenderer {
       });
     },
 
+    upsertLineLayer(layerId, style, polyline) {
+      const mapboxLayerId = `${MANAGED_PREFIX}${layerId}`;
+      const sourceId = `${MANAGED_PREFIX}src-${layerId}`;
+
+      whenStyleReady(() => {
+        const geojson = {
+          type: 'Feature' as const,
+          geometry: { type: 'LineString' as const, coordinates: polyline },
+          properties: {},
+        };
+
+        const existing = map.getSource(sourceId) as mapboxgl.GeoJSONSource | undefined;
+        if (existing) {
+          existing.setData(geojson);
+          return;
+        }
+
+        map.addSource(sourceId, { type: 'geojson', data: geojson });
+        map.addLayer({
+          id: mapboxLayerId,
+          type: 'line',
+          source: sourceId,
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: {
+            'line-color': style.color,
+            'line-width': style.width ?? 4,
+            'line-opacity': style.opacity ?? 0.9,
+            ...(style.dashArray ? { 'line-dasharray': style.dashArray } : {}),
+          },
+        });
+      });
+    },
+
+    upsertPolygonLayer(layerId, style, polygon) {
+      const mapboxLayerId = `${MANAGED_PREFIX}${layerId}`;
+      const outlineLayerId = `${mapboxLayerId}-outline`;
+      const sourceId = `${MANAGED_PREFIX}src-${layerId}`;
+
+      whenStyleReady(() => {
+        const geojson = {
+          type: 'Feature' as const,
+          geometry: { type: 'Polygon' as const, coordinates: polygon },
+          properties: {},
+        };
+
+        const existing = map.getSource(sourceId) as mapboxgl.GeoJSONSource | undefined;
+        if (existing) {
+          existing.setData(geojson);
+          return;
+        }
+
+        map.addSource(sourceId, { type: 'geojson', data: geojson });
+        map.addLayer({
+          id: mapboxLayerId,
+          type: 'fill',
+          source: sourceId,
+          paint: {
+            'fill-color': style.fill,
+            'fill-opacity': style.fillOpacity ?? 0.12,
+          },
+        });
+        if (style.outline) {
+          map.addLayer({
+            id: outlineLayerId,
+            type: 'line',
+            source: sourceId,
+            paint: {
+              'line-color': style.outline,
+              'line-width': 1.5,
+              'line-dasharray': [2, 2],
+            },
+          });
+        }
+      });
+    },
+
     setLayerVisible(layerId, visible) {
       const mapboxLayerId = `${MANAGED_PREFIX}${layerId}`;
+      const outlineLayerId = `${mapboxLayerId}-outline`;
       whenStyleReady(() => {
-        if (!map.getLayer(mapboxLayerId)) return;
-        map.setLayoutProperty(mapboxLayerId, 'visibility', visible ? 'visible' : 'none');
+        if (map.getLayer(mapboxLayerId)) {
+          map.setLayoutProperty(mapboxLayerId, 'visibility', visible ? 'visible' : 'none');
+        }
+        if (map.getLayer(outlineLayerId)) {
+          map.setLayoutProperty(outlineLayerId, 'visibility', visible ? 'visible' : 'none');
+        }
       });
     },
 
     removeLayer(layerId) {
       const mapboxLayerId = `${MANAGED_PREFIX}${layerId}`;
+      const outlineLayerId = `${mapboxLayerId}-outline`;
       const sourceId = `${MANAGED_PREFIX}src-${layerId}`;
       whenStyleReady(() => {
+        if (map.getLayer(outlineLayerId)) map.removeLayer(outlineLayerId);
         if (map.getLayer(mapboxLayerId)) map.removeLayer(mapboxLayerId);
         if (map.getSource(sourceId)) map.removeSource(sourceId);
         managedLayers.delete(mapboxLayerId);
+      });
+    },
+
+    setWaypointMarker(coords) {
+      whenStyleReady(() => {
+        ensureWaypointLayer();
+        const src = map.getSource(WAYPOINT_SOURCE) as mapboxgl.GeoJSONSource | undefined;
+        if (!src) return;
+        src.setData(
+          coords
+            ? {
+                type: 'FeatureCollection',
+                features: [
+                  {
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: [coords.lng, coords.lat] },
+                    properties: {},
+                  },
+                ],
+              }
+            : { type: 'FeatureCollection', features: [] },
+        );
       });
     },
 
@@ -254,7 +458,19 @@ export function createRenderer(opts: RendererInitOptions): MapRenderer {
       };
     },
 
+    onLongPress(handler) {
+      longPressHandlers.add(handler);
+      return () => {
+        longPressHandlers.delete(handler);
+      };
+    },
+
     destroy() {
+      canvas.removeEventListener('touchstart', onTouchStart);
+      canvas.removeEventListener('touchmove', onTouchMove);
+      canvas.removeEventListener('touchend', onTouchEnd);
+      canvas.removeEventListener('touchcancel', onTouchEnd);
+      cancelPress();
       map.remove();
     },
   };

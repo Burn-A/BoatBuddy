@@ -16,10 +16,11 @@ import { cn } from '@/lib/cn';
 const LAYER_DEFS: { id: LayerId; label: string; milestone: string }[] = [
   { id: 'tides', label: 'Tide stations', milestone: 'M4' },
   { id: 'waves', label: 'Wave buoys', milestone: 'M4' },
-  { id: 'aton', label: 'Aids to navigation', milestone: 'M4' },
-  { id: 'hazards', label: 'Hazards', milestone: 'M4' },
+  { id: 'range', label: 'Fuel range ring', milestone: 'M5' },
+  { id: 'aton', label: 'Aids to navigation', milestone: 'M7' },
+  { id: 'hazards', label: 'Hazards', milestone: 'M7' },
   { id: 'marinas', label: 'Marinas', milestone: 'M6' },
-  { id: 'depth', label: 'Charted depth', milestone: 'M4' },
+  { id: 'depth', label: 'Charted depth', milestone: 'M7' },
 ];
 
 export function LayerFab() {

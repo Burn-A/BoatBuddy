@@ -2,7 +2,7 @@
 
 A mobile-first trip planner for recreational boaters. BoatBuddy gives you on-the-water GPS navigation, near-real-time water depth and wave data, marina and harbor information, and an adaptive ETA based on your specific boat's performance — all in a fast, Google-Maps-style interface.
 
-> **Status:** M4 — Live data. Requirements ([`SRS.md`](./SRS.md)) and architecture ([`ARCHITECTURE.md`](./ARCHITECTURE.md)) are in place. The Next.js app boots a Mapbox map with live GPS vessel position, side menu, unit preferences, course-up compass, and a 54-boat library backed by IndexedDB. A Next.js BFF proxies NOAA CO-OPS (tides) and NDBC (wave buoys) behind a TTL-cached server layer; the client uses TanStack Query to render tappable station overlays with bottom-sheet detail cards showing latest water level, next high/low, sig-wave height, wind, and a freshness badge. Marinas and routing land in M5–M6.
+> **Status:** M5 — ETA + routing. Requirements ([`SRS.md`](./SRS.md)) and architecture ([`ARCHITECTURE.md`](./ARCHITECTURE.md)) are in place. The Next.js app boots a Mapbox map with live GPS vessel position, a 54-boat library backed by IndexedDB, and tappable NOAA tide / wave-buoy overlays from a TTL-cached BFF. Long-press the map to drop a waypoint, confirm "Route here", and a great-circle line plus an adaptive ETA pill appears — the pill switches between live GPS speed and the active boat's cruise speed depending on whether the vessel is underway. A toggleable fuel-range ring shows how far the boat can go on remaining fuel with a 20% reserve. Marinas land in M6; offline + PWA polish in M7.
 
 ---
 

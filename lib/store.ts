@@ -12,6 +12,7 @@ import { create } from 'zustand';
 import { DEFAULT_UNITS, type UnitPrefs } from './units';
 import type { BoatProfile } from '@/features/boat/types';
 import type { Bbox } from './bbox';
+import type { LatLng } from './geo';
 
 export interface SelectedFeature {
   kind: 'tide' | 'wave';
@@ -38,7 +39,8 @@ export type LayerId =
   | 'aton'
   | 'hazards'
   | 'marinas'
-  | 'depth';
+  | 'depth'
+  | 'range';
 
 export interface UiState {
   // Map orientation
@@ -76,6 +78,15 @@ export interface UiState {
   // Currently-tapped tide station or wave buoy.
   selectedFeature: SelectedFeature | null;
   setSelectedFeature: (f: SelectedFeature | null) => void;
+
+  // Active routing destination (FR-007). Cleared via RouteHeader X.
+  destination: LatLng | null;
+  setDestination: (d: LatLng | null) => void;
+
+  // A long-press has dropped a candidate waypoint; user can confirm
+  // ("Route here") or cancel (FR-006).
+  ephemeralWaypoint: LatLng | null;
+  setEphemeralWaypoint: (p: LatLng | null) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -96,6 +107,7 @@ export const useUiStore = create<UiState>((set) => ({
     hazards: false,
     marinas: false,
     depth: false,
+    range: false,
   },
   toggleLayer: (id) =>
     set((s) => ({ layers: { ...s.layers, [id]: !s.layers[id] } })),
@@ -112,4 +124,10 @@ export const useUiStore = create<UiState>((set) => ({
 
   selectedFeature: null,
   setSelectedFeature: (f) => set({ selectedFeature: f }),
+
+  destination: null,
+  setDestination: (d) => set({ destination: d }),
+
+  ephemeralWaypoint: null,
+  setEphemeralWaypoint: (p) => set({ ephemeralWaypoint: p }),
 }));

@@ -8,6 +8,8 @@
  *   M3: hydrate boat library on mount.
  *   M4: track viewport bbox, mount tide + wave data layers, handle
  *       feature taps via a bottom sheet.
+ *   M5: long-press to drop a waypoint, route line + adaptive ETA,
+ *       fuel-range ring.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -16,6 +18,8 @@ import { startVesselWatcher, type VesselWatcher } from '@/features/navigation/ve
 import { hydrateBoatLibrary } from '@/features/boat/profile';
 import { useTideLayer } from '@/features/map/layers/tides';
 import { useWaveLayer } from '@/features/map/layers/waves';
+import { useRouteLayer } from '@/features/map/layers/route';
+import { useRangeRingLayer } from '@/features/map/layers/rangeRing';
 import { useUiStore } from '@/lib/store';
 import { SearchBar } from '@/components/SearchBar';
 import { SideMenu } from '@/components/SideMenu';
@@ -24,6 +28,8 @@ import { CompassButton } from '@/components/CompassButton';
 import { StatusPill } from '@/components/StatusPill';
 import { BottomSheet } from '@/components/BottomSheet';
 import { FeatureDetail } from '@/components/FeatureDetail';
+import { RouteHeader } from '@/components/RouteHeader';
+import { WaypointPrompt } from '@/components/WaypointPrompt';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '';
 const MAPBOX_STYLE =
@@ -44,6 +50,9 @@ export function MapView() {
   const layers = useUiStore((s) => s.layers);
   const selectedFeature = useUiStore((s) => s.selectedFeature);
   const setSelectedFeature = useUiStore((s) => s.setSelectedFeature);
+  const setEphemeralWaypoint = useUiStore((s) => s.setEphemeralWaypoint);
+  const destination = useUiStore((s) => s.destination);
+  const ephemeralWaypoint = useUiStore((s) => s.ephemeralWaypoint);
 
   // Mount the map + watchers once.
   useEffect(() => {
@@ -69,6 +78,11 @@ export function MapView() {
       const name = (feature.properties?.name as string | undefined) ?? feature.id;
       setSelectedFeature({ kind, id: feature.id, name });
     });
+    const offLongPress = r.onLongPress((coords) => {
+      // FR-006: a long-press drops a candidate waypoint; the user
+      // confirms via the WaypointPrompt before it becomes a route.
+      setEphemeralWaypoint(coords);
+    });
 
     setRenderer(r);
     void hydrateBoatLibrary();
@@ -84,6 +98,7 @@ export function MapView() {
     return () => {
       offBbox();
       offClick();
+      offLongPress();
       watcherRef.current?.stop();
       watcherRef.current = null;
       r.destroy();
@@ -112,13 +127,26 @@ export function MapView() {
   useTideLayer({ renderer, bbox, visible: layers.tides });
   useWaveLayer({ renderer, bbox, visible: layers.waves });
 
+  // Route + range-ring layers read the vessel/destination/active-boat
+  // straight from the store, so they don't need props.
+  useRouteLayer({ renderer });
+  useRangeRingLayer({ renderer });
+
   return (
     <>
       <div ref={containerRef} className="absolute inset-0" aria-label="Marine map" />
 
-      <div className="pointer-events-none absolute inset-x-0 top-[env(safe-area-inset-top)] z-20 flex items-start gap-2 p-3">
-        <SearchBar className="flex-1" />
-        <StatusPill />
+      <div className="pointer-events-none absolute inset-x-0 top-[env(safe-area-inset-top)] z-20 flex flex-col gap-2 p-3">
+        <div className="flex items-start gap-2">
+          <SearchBar className="flex-1" />
+          <StatusPill />
+        </div>
+        {destination && (
+          <div className="flex justify-center">
+            <RouteHeader />
+          </div>
+        )}
+        {ephemeralWaypoint && <WaypointPrompt />}
       </div>
 
       <div className="pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-3 z-20 flex flex-col items-end gap-3">
