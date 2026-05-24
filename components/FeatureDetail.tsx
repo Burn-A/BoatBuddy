@@ -13,6 +13,7 @@ import { classifyFreshness, formatRelative } from '@/lib/time';
 import { depthFromMeters, fromMps } from '@/lib/units';
 import { useUiStore, type SelectedFeature } from '@/lib/store';
 import { cn } from '@/lib/cn';
+import { MarinaDetail } from './MarinaDetail';
 
 interface FeatureDetailProps {
   feature: SelectedFeature;
@@ -20,7 +21,8 @@ interface FeatureDetailProps {
 
 export function FeatureDetail({ feature }: FeatureDetailProps) {
   if (feature.kind === 'tide') return <TideDetail feature={feature} />;
-  return <WaveDetail feature={feature} />;
+  if (feature.kind === 'wave') return <WaveDetail feature={feature} />;
+  return <MarinaDetail id={feature.id} />;
 }
 
 function FreshBadge({ timestampMs }: { timestampMs: number }) {

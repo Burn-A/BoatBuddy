@@ -18,6 +18,7 @@ import { startVesselWatcher, type VesselWatcher } from '@/features/navigation/ve
 import { hydrateBoatLibrary } from '@/features/boat/profile';
 import { useTideLayer } from '@/features/map/layers/tides';
 import { useWaveLayer } from '@/features/map/layers/waves';
+import { useMarinaLayer } from '@/features/map/layers/marinas';
 import { useRouteLayer } from '@/features/map/layers/route';
 import { useRangeRingLayer } from '@/features/map/layers/rangeRing';
 import { useUiStore } from '@/lib/store';
@@ -73,7 +74,8 @@ export function MapView() {
 
     const offBbox = r.onBboxChange((b) => setBbox(b));
     const offClick = r.onFeatureClick((_layerId, feature) => {
-      const kind = (feature.properties?.kind as 'tide' | 'wave' | undefined) ?? null;
+      const kind =
+        (feature.properties?.kind as 'tide' | 'wave' | 'marina' | undefined) ?? null;
       if (!kind) return;
       const name = (feature.properties?.name as string | undefined) ?? feature.id;
       setSelectedFeature({ kind, id: feature.id, name });
@@ -122,10 +124,11 @@ export function MapView() {
     renderer?.setCourseUp(courseUp, vessel?.headingDeg ?? null);
   }, [courseUp, vessel?.headingDeg, renderer]);
 
-  // Bind data-driven layers (tide, wave). Each binding handles its own
-  // visibility & data lifecycle.
+  // Bind data-driven layers (tide, wave, marina). Each binding handles
+  // its own visibility & data lifecycle.
   useTideLayer({ renderer, bbox, visible: layers.tides });
   useWaveLayer({ renderer, bbox, visible: layers.waves });
+  useMarinaLayer({ renderer, bbox, visible: layers.marinas });
 
   // Route + range-ring layers read the vessel/destination/active-boat
   // straight from the store, so they don't need props.
@@ -159,7 +162,15 @@ export function MapView() {
       <BottomSheet
         open={!!selectedFeature}
         onClose={() => setSelectedFeature(null)}
-        title={selectedFeature?.kind === 'tide' ? 'Tide station' : 'Wave buoy'}
+        title={
+          selectedFeature?.kind === 'tide'
+            ? 'Tide station'
+            : selectedFeature?.kind === 'wave'
+              ? 'Wave buoy'
+              : selectedFeature?.kind === 'marina'
+                ? 'Marina'
+                : 'Details'
+        }
       >
         {selectedFeature && <FeatureDetail feature={selectedFeature} />}
       </BottomSheet>

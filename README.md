@@ -2,7 +2,7 @@
 
 A mobile-first trip planner for recreational boaters. BoatBuddy gives you on-the-water GPS navigation, near-real-time water depth and wave data, marina and harbor information, and an adaptive ETA based on your specific boat's performance — all in a fast, Google-Maps-style interface.
 
-> **Status:** M5 — ETA + routing. Requirements ([`SRS.md`](./SRS.md)) and architecture ([`ARCHITECTURE.md`](./ARCHITECTURE.md)) are in place. The Next.js app boots a Mapbox map with live GPS vessel position, a 54-boat library backed by IndexedDB, and tappable NOAA tide / wave-buoy overlays from a TTL-cached BFF. Long-press the map to drop a waypoint, confirm "Route here", and a great-circle line plus an adaptive ETA pill appears — the pill switches between live GPS speed and the active boat's cruise speed depending on whether the vessel is underway. A toggleable fuel-range ring shows how far the boat can go on remaining fuel with a 20% reserve. Marinas land in M6; offline + PWA polish in M7.
+> **Status:** M6 — Marinas. Requirements ([`SRS.md`](./SRS.md)) and architecture ([`ARCHITECTURE.md`](./ARCHITECTURE.md)) are in place. The Next.js app boots a Mapbox map with live GPS vessel position, a 54-boat library backed by IndexedDB, NOAA tide / wave overlays, long-press waypoint drop with great-circle routing and adaptive ETA, and a fuel-range ring. A new marina layer pulls OSM `leisure=marina` features via a 24h-cached Overpass proxy; tapping a marina opens a detail card with fuel (gas/diesel), pumpout, shore power, restrooms, showers, restaurant, marine store, slip capacity, VHF channel, phone, and website — graceful "Not listed" fallbacks for tags OSM doesn't have. Offline + PWA polish lands in M7.
 
 ---
 

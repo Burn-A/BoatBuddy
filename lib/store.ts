@@ -15,7 +15,7 @@ import type { Bbox } from './bbox';
 import type { LatLng } from './geo';
 
 export interface SelectedFeature {
-  kind: 'tide' | 'wave';
+  kind: 'tide' | 'wave' | 'marina';
   id: string;
   name: string;
 }

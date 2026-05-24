@@ -19,7 +19,7 @@ const LAYER_DEFS: { id: LayerId; label: string; milestone: string }[] = [
   { id: 'range', label: 'Fuel range ring', milestone: 'M5' },
   { id: 'aton', label: 'Aids to navigation', milestone: 'M7' },
   { id: 'hazards', label: 'Hazards', milestone: 'M7' },
-  { id: 'marinas', label: 'Marinas', milestone: 'M6' },
+  { id: 'marinas', label: 'Marinas', milestone: 'OSM' },
   { id: 'depth', label: 'Charted depth', milestone: 'M7' },
 ];
 
